@@ -17,30 +17,30 @@ jobs:
 
     - name: Instalar dependencias del sistema
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libssl-dev pkg-config make git cmake wget tar
+        sudo apt-get update || true
+        sudo apt-get install -y libssl-dev pkg-config make git cmake wget tar clang llvm
 
-    - name: Descargar e instalar OpenOrbis Toolchain completo
+    - name: Construir e Instalar OpenOrbis Toolchain
       run: |
-        # Creamos el directorio destino
-        sudo mkdir -p /opt/openorbis
-        # Descargamos los binarios oficiales compilados para Linux
-        wget https://github.com
-        # Extraemos directamente en la ruta del SDK
-        sudo tar -xzvf OpenOrbisPS4Toolchain-Linux.tar.gz -C /opt/openorbis --strip-components=1
+        # Clonamos el repositorio oficial del Toolchain
+        git clone --recursive https://github.com /opt/openorbis
         
-        # Seteamos las variables de entorno requeridas por OpenOrbis en el contenedor
+        # Seteamos las variables de entorno necesarias para la compilación del SDK
         echo "OO_PS4_TOOLCHAIN=/opt/openorbis" >> $GITHUB_ENV
         echo "/opt/openorbis/extra/llvm/bin" >> $GITHUB_PATH
+        
+        # Compilamos las herramientas de empaquetado nativas (create-eboot, create-pkg)
+        cd /opt/openorbis
+        make
 
     - name: Configurar Proyecto con CMake
       run: |
-        # Ejecutamos CMake apuntando al archivo toolchain oficial de OpenOrbis
+        # Forzamos a CMake a usar el archivo de configuración de PS4 de OpenOrbis
         cmake -B build -DCMAKE_TOOLCHAIN_FILE=/opt/openorbis/cmake/ps4.cmake
 
     - name: Compilar Codigo Fuente
       run: |
-        # Compilamos el proyecto
+        # Compilamos el puerto de Mario Maker 2
         cmake --build build --config Release
 
     - name: Construir archivo pkg
