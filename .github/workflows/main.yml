@@ -1,0 +1,51 @@
+name: Compilar y Empaquetar SMM2 para PS4
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-ps4:
+    runs-on: ubuntu-latest
+    container: openorbis/openorbis-ps4-toolchain:latest
+
+    steps:
+    - name: Checkout del repositorio
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Instalar dependencias de empaquetado
+      run: |
+        apt-get update && apt-get install -y yaml-cpp-dev libssl-dev pkg-config make git
+
+    - name: Configurar Entorno de Compilación
+      run: |
+        echo "OO_PS4_TOOLCHAIN=$OO_PS4_TOOLCHAIN"
+        # Aquí puedes meter scripts para reemplazar las rutas de SDL3 por OpenOrbis si es necesario
+
+    - name: Compilar Código Fuente
+      run: |
+        cd src
+        make
+
+    - name: Preparar Herramientas de Empaquetado (PKG)
+      run: |
+        git clone https://github.com/OpenOrbis/gamedev-pkg.git
+        cd gamedev-pkg
+        make
+        cp gamedev-pkg /usr/local/bin/
+
+    - name: Construir archivo .pkg
+      run: |
+        gamedev-pkg --output out/smm2_ps4.pkg project.gp4
+
+    - name: Subir Artefacto Extraído (.pkg)
+      uses: actions/upload-artifact@v4
+      with:
+        name: SMM2-PS4-PKG
+        path: out/smm2_ps4.pkg
+        
