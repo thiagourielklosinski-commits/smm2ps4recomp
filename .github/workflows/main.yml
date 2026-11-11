@@ -1,48 +1,46 @@
-name: Compilar SMM2 para PS4
+
+name: SMM2 PS4 Build
 
 on:
-  push:
-    branches: [ "main", "master" ]
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  build-ps4:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout del repositorio
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Instalar dependencias del sistema
-      run: |
-        sudo apt-get update --fix-missing
-        sudo apt-get install -y libssl-dev pkg-config make git cmake wget
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            clang \
+            lld \
+            pkg-config \
+            python3 \
+            git \
+            curl
 
-    - name: Descargar e instalar OpenOrbis Toolchain
-      run: |
-        P1="https://github.com"
-        P2="/OpenOrbis"
-        P3="/OpenOrbis-PS4-Toolchain.git"
-        git clone "$P1$P2$P3" /opt/openorbis
-        echo "OO_PS4_TOOLCHAIN=/opt/openorbis" >> $GITHUB_ENV
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
-    - name: Configurar e Instalar Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Check Rust
+        working-directory: core
+        run: cargo check --workspace --locked
 
-    - name: Compilar con Cargo (Rust)
-      run: |
-        CARGO_PATH=$(find . -name "Cargo.toml" | head -n 1)
-        if [ -f "$CARGO_PATH" ]; then
-          echo "Encontrado Cargo.toml en: $CARGO_PATH"
-          cargo build --manifest-path "$CARGO_PATH" --release
-        else
-          echo "No se encontro ningun Cargo.toml"
-          exit 1
-        fi
-
-    - name: Construir archivo pkg
-      run: |
-        echo "Aca va el empaquetado final del binario de Rust"
+      - name: Build Rust
+        working-directory: core
+        run: cargo build --workspace --release --locked
         
