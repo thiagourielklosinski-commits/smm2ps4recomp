@@ -18,7 +18,7 @@ jobs:
     - name: Instalar dependencias del sistema
       run: |
         sudo apt-get update
-        sudo apt-get install -y yaml-cpp-dev libssl-dev pkg-config make git cmake wget
+        sudo apt-get install -y libssl-dev pkg-config make git cmake wget
 
     - name: Descargar e instalar OpenOrbis Toolchain
       run: |
@@ -34,7 +34,7 @@ jobs:
     - name: Compilar Codigo Fuente
       run: |
         cd recomp/runtime/hle
-        make || echo "Si falla aca, vemos que dependencia falta"
+        make || echo "Si falla aca, vemos que de la scene nos falta clonar"
 
     - name: Construir archivo pkg
       run: |
