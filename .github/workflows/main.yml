@@ -1,5 +1,5 @@
 
-name: SMM2 PS4 Build
+name: SMM2 PS4 Build Test
 
 on:
   workflow_dispatch:
@@ -35,6 +35,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+
+      - name: Check icon
+        run: |
+          test -f ICON0.PNG
+          file ICON0.PNG
 
       - name: Check Rust
         working-directory: core
