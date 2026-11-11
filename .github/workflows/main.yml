@@ -1,4 +1,5 @@
-name: SMM2 PS4 PKG Build
+
+name: SMM2 PS4 Experimental Build
 
 on:
   workflow_dispatch:
@@ -6,12 +7,11 @@ on:
     branches:
       - main
 
-env:
-  OO_PS4_TOOLCHAIN: /opt/OpenOrbis/PS4Toolchain
-  DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: 1
+permissions:
+  contents: read
 
 jobs:
-  build-ps4-pkg:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,119 +20,69 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install system & image tools
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential \
-            clang \
-            lld \
             cmake \
             ninja-build \
+            clang \
+            lld \
+            pkg-config \
             python3 \
-            imagemagick \
-            wget \
-            tar
+            git \
+            curl \
+            zip \
+            unzip
 
-      - name: Setup .NET 6 Runtime (Required by OpenOrbis)
-        uses: actions/setup-dotnet@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          dotnet-version: '6.0.x'
+          components: rustfmt, clippy
 
-      - name: Setup OpenOrbis PS4 Toolchain
+      - name: Check package icon
         run: |
-          sudo mkdir -p /opt/OpenOrbis/PS4Toolchain
-          wget -q https://github.com -O /tmp/oo.tar.gz
-          sudo tar -xzf /tmp/oo.tar.gz -C /opt/OpenOrbis/PS4Toolchain --strip-components=1
-          sudo chmod -R +x /opt/OpenOrbis/PS4Toolchain/bin/linux/
+          test -f Pkgicon.png
+          file Pkgicon.png
 
-      - name: Prepare PS4 package structure & icon0.png
+      - name: Check Rust
+        working-directory: core
+        run: cargo check --workspace --locked
+
+      - name: Build Rust
+        working-directory: core
+        run: cargo build --workspace --release --locked
+
+      - name: Inspect PS4 build support
+        working-directory: recomp
         run: |
-          mkdir -p ps4_build/sce_sys/about
-          mkdir -p ps4_temp
-          if [ ! -f "Pkgicon.png" ]; then
-            echo "ERROR: No se encontro Pkgicon.png en la raiz"
-            exit 1
+          echo "Checking available platforms..."
+
+          if grep -qiE 'ps4|orbis' Makefile; then
+            echo "PS4 references found:"
+            grep -inE 'ps4|orbis' Makefile
+          else
+            echo "::warning::No PS4/Orbis target found in Makefile"
+            echo "PS4 compilation is not implemented yet."
           fi
-          # Convertir Pkgicon.png a 512x512 PNG 24-bit sin canal alfa (obligatorio en PS4)
-          convert Pkgicon.png -resize 512x512! -background black -alpha remove -alpha off PNG24:ps4_build/sce_sys/icon0.png
-          file ps4_build/sce_sys/icon0.png
 
-      - name: Generate param.sfo
+      - name: Check PS4 packaging tools
         run: |
-          PKGTOOL="dotnet $OO_PS4_TOOLCHAIN/bin/linux/PkgTool.Core.dll"
-          $PKGTOOL sfo_new ps4_build/sce_sys/param.sfo
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo APP_TYPE --type Integer --maxsize 4 --value 1
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo APP_VER --type Utf8 --maxsize 8 --value "01.00"
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo ATTRIBUTE --type Integer --maxsize 4 --value 0
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo CATEGORY --type Utf8 --maxsize 4 --value "gd"
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo CONTENT_ID --type Utf8 --maxsize 48 --value "IV0000-SMM200001_00-SMM2RECOMPPS4000"
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo DOWNLOAD_DATA_SIZE --type Integer --maxsize 4 --value 0
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo SYSTEM_VER --type Integer --maxsize 4 --value 0
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo TITLE --type Utf8 --maxsize 128 --value "Super Mario Maker 2 Recomp"
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo TITLE_ID --type Utf8 --maxsize 12 --value "SMM200001"
-          $PKGTOOL sfo_setentry ps4_build/sce_sys/param.sfo VERSION --type Utf8 --maxsize 8 --value "01.00"
+          for tool in orbis-clang orbis-ld create-fself; do
+            if command -v "$tool" >/dev/null 2>&1; then
+              echo "$tool found"
+            else
+              echo "$tool not installed"
+            fi
+          done
 
-      - name: Compile PS4 stub executable (eboot.bin)
-        run: |
-          cat << 'EOF' > ps4_temp/main.c
-          #include <stdio.h>
-          #include <unistd.h>
-
-          int main(void) {
-              printf("SMM2 Recomp PS4 Booting...\n");
-              for (;;) {
-                  sleep(1);
-              }
-              return 0;
-          }
-          EOF
-
-          clang --target=x86_64-pc-freebsd12-elf \
-            -fPIC -funwind-tables \
-            -I"$OO_PS4_TOOLCHAIN/include" \
-            -I"$OO_PS4_TOOLCHAIN/include/orbis" \
-            -c ps4_temp/main.c -o ps4_temp/main.o
-
-          ld.lld -m elf_x86_64 -pie \
-            --script "$OO_PS4_TOOLCHAIN/link.x" \
-            --eh-frame-hdr \
-            -o ps4_temp/eboot.elf \
-            "$OO_PS4_TOOLCHAIN/lib/crt1.o" \
-            ps4_temp/main.o \
-            -L"$OO_PS4_TOOLCHAIN/lib" \
-            -lkernel -lc -lc++
-
-          "$OO_PS4_TOOLCHAIN/bin/linux/create-fself" \
-            -in=ps4_temp/eboot.elf \
-            --out=ps4_build/eboot.bin \
-            --eboot=ps4_build/eboot.bin \
-            --paid 0x3800000000000011
-
-      - name: Generate GP4 & Build final PS4 PKG
-        run: |
-          PKGTOOL="dotnet $OO_PS4_TOOLCHAIN/bin/linux/PkgTool.Core.dll"
-          
-          # Crear proyecto GP4 listando solo los archivos limpios de ps4_build
-          $PKGTOOL pkg_gp4 \
-            --content-id="IV0000-SMM200001_00-SMM2RECOMPPS4000" \
-            --files="eboot.bin sce_sys/icon0.png sce_sys/param.sfo" \
-            --sfo="ps4_build/sce_sys/param.sfo" \
-            --out="ps4_temp/project.gp4" \
-            ps4_build
-
-          # Construir el PKG final desde el GP4
-          $PKGTOOL pkg_build \
-            ps4_temp/project.gp4 \
-            .
-
-          # Renombrar el archivo generado (OpenOrbis lo nombra con el CONTENT_ID)
-          mv IV0000-SMM200001_00-SMM2RECOMPPS4000.pkg SMM2Recomp-PS4.pkg
-          ls -lh SMM2Recomp-PS4.pkg
-
-      - name: Upload PS4 PKG Artifact
+      - name: Upload build information
         uses: actions/upload-artifact@v4
         with:
-          name: SMM2Recomp-PS4-PKG
-          path: SMM2Recomp-PS4.pkg
+          name: SMM2-PS4-build-diagnostics
+          path: |
+            Pkgicon.png
+            recomp/Makefile
+          if-no-files-found: error
           
