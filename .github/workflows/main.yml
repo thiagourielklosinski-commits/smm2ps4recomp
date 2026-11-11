@@ -36,10 +36,14 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Check icon
+      - name: Check ICON0.PNG
         run: |
-          test -f ICON0.PNG
-          file ICON0.PNG
+          if [ ! -f "ICON0.PNG" ]; then
+            echo "ERROR: No se encontro ICON0.PNG en la raiz"
+            exit 1
+          fi
+          echo "ICON0.PNG encontrado correctamente"
+          file "ICON0.PNG"
 
       - name: Check Rust
         working-directory: core
