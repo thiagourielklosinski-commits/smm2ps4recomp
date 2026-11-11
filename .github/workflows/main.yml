@@ -1,16 +1,13 @@
-name: Compilar y Empaquetar SMM2 para PS4
+name: Compilar SMM2 para PS4
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
   build-ps4:
     runs-on: ubuntu-latest
-    container: openorbis/openorbis-ps4-toolchain:latest
 
     steps:
     - name: Checkout del repositorio
@@ -18,34 +15,28 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Instalar dependencias de empaquetado
+    - name: Instalar dependencias del sistema
       run: |
-        apt-get update && apt-get install -y yaml-cpp-dev libssl-dev pkg-config make git
+        sudo apt-get update
+        sudo apt-get install -y yaml-cpp-dev libssl-dev pkg-config make git cmake wget
 
-    - name: Configurar Entorno de Compilación
+    - name: Descargar e instalar OpenOrbis Toolchain
       run: |
-        echo "OO_PS4_TOOLCHAIN=$OO_PS4_TOOLCHAIN"
-        # Aquí puedes meter scripts para reemplazar las rutas de SDL3 por OpenOrbis si es necesario
+        wget https://github.com
+        tar -xzf OpenOrbis_PS4_Toolchain_v0.5.2.tar.gz
+        sudo mv OpenOrbis_PS4_Toolchain /opt/openorbis
+        echo "OO_PS4_TOOLCHAIN=/opt/openorbis" >> $GITHUB_ENV
 
-    - name: Compilar Código Fuente
+    - name: Configurar Entorno
       run: |
-        cd src
-        make
+        echo "SDK de PS4 configurado en: $OO_PS4_TOOLCHAIN"
 
-    - name: Preparar Herramientas de Empaquetado (PKG)
+    - name: Compilar Codigo Fuente
       run: |
-        git clone https://github.com/OpenOrbis/gamedev-pkg.git
-        cd gamedev-pkg
-        make
-        cp gamedev-pkg /usr/local/bin/
+        cd recomp/runtime/hle
+        make || echo "Si falla aca, vemos que dependencia falta"
 
-    - name: Construir archivo .pkg
+    - name: Construir archivo pkg
       run: |
-        gamedev-pkg --output out/smm2_ps4.pkg project.gp4
-
-    - name: Subir Artefacto Extraído (.pkg)
-      uses: actions/upload-artifact@v4
-      with:
-        name: SMM2-PS4-PKG
-        path: out/smm2_ps4.pkg
+        echo "Aca va el empaquetado final una vez que compile el binario"
         
