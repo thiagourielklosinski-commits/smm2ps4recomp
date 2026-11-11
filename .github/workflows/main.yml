@@ -7,7 +7,8 @@ on:
 
 jobs:
   build-ps4:
-    runs-on: ubuntu-latest
+    # Forzamos una versión estable de Ubuntu para evitar los servidores caídos de la versión experimental
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout del repositorio
@@ -15,32 +16,31 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Configurar DNS y limpiar espejos de red
+      run: |
+        # Forzar DNS de Google para evitar fallos de resolución de nombres (Temporary failure)
+        sudo echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+        sudo echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf
+
     - name: Instalar dependencias del sistema
       run: |
-        sudo apt-get update || true
+        sudo apt-get update
         sudo apt-get install -y libssl-dev pkg-config make git cmake wget tar clang llvm
 
     - name: Construir e Instalar OpenOrbis Toolchain
       run: |
-        # Clonamos el repositorio oficial del Toolchain
         git clone --recursive https://github.com /opt/openorbis
-        
-        # Seteamos las variables de entorno necesarias para la compilación del SDK
         echo "OO_PS4_TOOLCHAIN=/opt/openorbis" >> $GITHUB_ENV
         echo "/opt/openorbis/extra/llvm/bin" >> $GITHUB_PATH
-        
-        # Compilamos las herramientas de empaquetado nativas (create-eboot, create-pkg)
         cd /opt/openorbis
         make
 
     - name: Configurar Proyecto con CMake
       run: |
-        # Forzamos a CMake a usar el archivo de configuración de PS4 de OpenOrbis
         cmake -B build -DCMAKE_TOOLCHAIN_FILE=/opt/openorbis/cmake/ps4.cmake
 
     - name: Compilar Codigo Fuente
       run: |
-        # Compilamos el puerto de Mario Maker 2
         cmake --build build --config Release
 
     - name: Construir archivo pkg
