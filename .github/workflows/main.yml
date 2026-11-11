@@ -36,14 +36,14 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Check ICON0.PNG
+      - name: Check package icon
         run: |
-          if [ ! -f "ICON0.PNG" ]; then
-            echo "ERROR: No se encontro ICON0.PNG en la raiz"
+          if [ ! -f "pkgicon.png" ]; then
+            echo "ERROR: No se encontro pkgicon.png en la raiz"
             exit 1
           fi
-          echo "ICON0.PNG encontrado correctamente"
-          file "ICON0.PNG"
+          echo "pkgicon.png encontrado correctamente"
+          file "pkgicon.png"
 
       - name: Check Rust
         working-directory: core
