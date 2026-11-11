@@ -38,12 +38,12 @@ jobs:
 
       - name: Check package icon
         run: |
-          if [ ! -f "pkgicon.png" ]; then
-            echo "ERROR: No se encontro pkgicon.png en la raiz"
+          if [ ! -f "Pkgicon.png" ]; then
+            echo "ERROR: No se encontro Pkgicon.png en la raiz"
             exit 1
           fi
-          echo "pkgicon.png encontrado correctamente"
-          file "pkgicon.png"
+          echo "Pkgicon.png encontrado correctamente"
+          file "Pkgicon.png"
 
       - name: Check Rust
         working-directory: core
