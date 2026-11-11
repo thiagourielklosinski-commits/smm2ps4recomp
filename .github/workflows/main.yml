@@ -22,7 +22,8 @@ jobs:
 
     - name: Descargar e instalar OpenOrbis Toolchain
       run: |
-        git clone https://github.com /opt/openorbis
+        URL_SDK="https://github.com"
+        git clone $URL_SDK /opt/openorbis
         echo "OO_PS4_TOOLCHAIN=/opt/openorbis" >> $GITHUB_ENV
 
     - name: Configurar Entorno
