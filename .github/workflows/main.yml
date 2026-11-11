@@ -32,10 +32,13 @@ jobs:
       run: |
         echo "SDK de PS4 configurado en: $OO_PS4_TOOLCHAIN"
 
+    - name: Configurar Proyecto con CMake
+      run: |
+        cmake -B build -DCMAKE_TOOLCHAIN_FILE=/opt/openorbis/cmake/ps4.cmake
+
     - name: Compilar Codigo Fuente
       run: |
-        cd recomp/runtime/hle
-        make || echo "Si falla aca, vemos que de la scene nos falta clonar"
+        cmake --build build --config Release
 
     - name: Construir archivo pkg
       run: |
