@@ -13,21 +13,20 @@ jobs:
     - name: Checkout del repositorio
       uses: actions/checkout@v4
       with:
-        submodules: false # Desactivamos submodulos conflictivos temporalmente
+        submodules: false
 
-    - name: Descargar OpenOrbis mediante ZIP Seguro
+    - name: Clonar OpenOrbis de forma nativa
       run: |
-        # Usamos la API de GitHub directo en formato ZIP para saltear fallos de Git/DNS
-        wget https://github.com -O openorbis.zip
-        unzip openorbis.zip
-        sudo mv OpenOrbis-PS4-Toolchain-master /opt/openorbis
+        # Usamos un clonado simple sin submódulos pesados para evitar errores de conexión
+        git clone --depth=1 https://github.com /opt/openorbis
         
+        # Configuramos las variables de entorno requeridas por el SDK
         echo "OO_PS4_TOOLCHAIN=/opt/openorbis" >> $GITHUB_ENV
         echo "/opt/openorbis/extra/llvm/bin" >> $GITHUB_PATH
 
     - name: Configurar Proyecto con CMake
       run: |
-        # Saltamos la busqueda de librerias de PC que congelan el proceso
+        # Pasamos las flags para ignorar los componentes de escritorio (PC)
         cmake -B build -DCMAKE_TOOLCHAIN_FILE=/opt/openorbis/cmake/ps4.cmake -DENABLE_SDL3=OFF -DENABLE_VULKAN=OFF
 
     - name: Compilar Codigo Fuente
