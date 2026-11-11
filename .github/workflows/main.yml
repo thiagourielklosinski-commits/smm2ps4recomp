@@ -7,7 +7,6 @@ on:
 
 jobs:
   build-ps4:
-    # Forzamos una versión estable de Ubuntu para evitar los servidores caídos de la versión experimental
     runs-on: ubuntu-24.04
 
     steps:
@@ -16,16 +15,16 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Configurar DNS y limpiar espejos de red
+    - name: Cambiar repositorios a los oficiales globales
       run: |
-        # Forzar DNS de Google para evitar fallos de resolución de nombres (Temporary failure)
-        sudo echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-        sudo echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf
+        # Reemplazamos los servidores espejos de Azure (que están rotos) por los oficiales de Ubuntu
+        sudo sed -i 's|http://ubuntu.com|http://ubuntu.com|g' /etc/apt/sources.list || true
 
     - name: Instalar dependencias del sistema
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libssl-dev pkg-config make git cmake wget tar clang llvm
+        # Forzamos un límite de reintentos rápidos para que no se quede colgado esperando
+        sudo apt-get -o Acquire::Retries=3 update
+        sudo apt-get install -y --fix-missing libssl-dev pkg-config make git cmake wget tar clang llvm
 
     - name: Construir e Instalar OpenOrbis Toolchain
       run: |
