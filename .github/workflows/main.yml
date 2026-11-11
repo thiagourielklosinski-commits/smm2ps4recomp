@@ -17,7 +17,7 @@ jobs:
 
     - name: Instalar dependencias del sistema
       run: |
-        sudo apt-get update
+        sudo apt-get update --fix-missing
         sudo apt-get install -y libssl-dev pkg-config make git cmake wget
 
     - name: Descargar e instalar OpenOrbis Toolchain
@@ -33,17 +33,16 @@ jobs:
 
     - name: Compilar con Cargo (Rust)
       run: |
-        # Buscamos el archivo Cargo.toml real en tu repositorio y lo compilamos directamente
         CARGO_PATH=$(find . -name "Cargo.toml" | head -n 1)
         if [ -f "$CARGO_PATH" ]; then
           echo "Encontrado Cargo.toml en: $CARGO_PATH"
           cargo build --manifest-path "$CARGO_PATH" --release
         else
-          echo "No se encontro ningun Cargo.toml en el repositorio. Avisale a Gemini!"
+          echo "No se encontro ningun Cargo.toml"
           exit 1
         fi
 
     - name: Construir archivo pkg
       run: |
-        echo "Aca va el empaquetado final una vez que compile el binario de Rust"
+        echo "Aca va el empaquetado final del binario de Rust"
         
