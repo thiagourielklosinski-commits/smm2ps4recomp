@@ -22,9 +22,7 @@ jobs:
 
     - name: Descargar e instalar OpenOrbis Toolchain
       run: |
-        wget https://github.com
-        tar -xzf OpenOrbis_PS4_Toolchain_v0.5.2.tar.gz
-        sudo mv OpenOrbis_PS4_Toolchain /opt/openorbis
+        git clone https://github.com /opt/openorbis
         echo "OO_PS4_TOOLCHAIN=/opt/openorbis" >> $GITHUB_ENV
 
     - name: Configurar Entorno
