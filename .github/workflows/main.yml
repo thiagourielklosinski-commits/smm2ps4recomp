@@ -7,57 +7,30 @@ on:
 
 jobs:
   build-ps4:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout del repositorio
       uses: actions/checkout@v4
       with:
-        submodules: recursive
+        submodules: false # Desactivamos submodulos conflictivos temporalmente
 
-    - name: Forzar repositorios globales oficiales
+    - name: Descargar OpenOrbis mediante ZIP Seguro
       run: |
-        # Eliminamos la configuración por defecto de Azure que está rota en el runner
-        sudo rm -f /etc/apt/sources.list.d/ubuntu.sources
+        # Usamos la API de GitHub directo en formato ZIP para saltear fallos de Git/DNS
+        wget https://github.com -O openorbis.zip
+        unzip openorbis.zip
+        sudo mv OpenOrbis-PS4-Toolchain-master /opt/openorbis
         
-        # Creamos una configuración limpia apuntando directamente al servidor principal global
-        sudo tee /etc/apt/sources.list.d/ubuntu.sources <<EOF
-        Types: deb
-        URIs: http://ubuntu.com
-        Suites: noble noble-updates noble-backports
-        Components: main restricted universe multiverse
-        Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-
-        Types: deb
-        URIs: http://ubuntu.com
-        Suites: noble-security
-        Components: main restricted universe multiverse
-        Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-        EOF
-
-    - name: Instalar dependencias del sistema
-      run: |
-        # Ahora el update debería volar porque va directo a los servidores estables
-        sudo apt-get -o Acquire::Retries=3 update
-        sudo apt-get install -y --fix-missing libssl-dev pkg-config make git cmake wget tar clang llvm
-
-    - name: Construir e Instalar OpenOrbis Toolchain
-      run: |
-        git clone --recursive https://github.com /opt/openorbis
         echo "OO_PS4_TOOLCHAIN=/opt/openorbis" >> $GITHUB_ENV
         echo "/opt/openorbis/extra/llvm/bin" >> $GITHUB_PATH
-        cd /opt/openorbis
-        make
 
     - name: Configurar Proyecto con CMake
       run: |
-        cmake -B build -DCMAKE_TOOLCHAIN_FILE=/opt/openorbis/cmake/ps4.cmake
+        # Saltamos la busqueda de librerias de PC que congelan el proceso
+        cmake -B build -DCMAKE_TOOLCHAIN_FILE=/opt/openorbis/cmake/ps4.cmake -DENABLE_SDL3=OFF -DENABLE_VULKAN=OFF
 
     - name: Compilar Codigo Fuente
       run: |
         cmake --build build --config Release
-
-    - name: Construir archivo pkg
-      run: |
-        echo "Aca va el empaquetado final una vez que compile el binario sin errores"
         
