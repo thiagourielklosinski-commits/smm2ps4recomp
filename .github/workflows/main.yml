@@ -13,7 +13,7 @@ jobs:
     - name: Checkout del repositorio
       uses: actions/checkout@v4
       with:
-        submodules: true # Activamos submodulos por si hay dependencias internas de Rust
+        submodules: true
 
     - name: Clonar OpenOrbis de forma nativa
       run: |
@@ -31,6 +31,6 @@ jobs:
 
     - name: Compilar Proyecto con Cargo
       run: |
-        # Compilamos usando el gestor nativo del proyecto en modo Release
-        cargo build --release
+        # Usamos --manifest-path para obligar a Rust a buscar el Cargo.toml dentro de la carpeta del puerto
+        cargo build --release --manifest-path recomp/Cargo.toml
         
